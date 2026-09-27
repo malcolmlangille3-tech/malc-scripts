@@ -1,16 +1,12 @@
 --[[
     ========================================================================
-    MASTERSCRIPTS PRESENT: MALC SCRIPTS (GitHub & Executor Ready)
+    MASTERSCRIPTS PRESENT: MALC SCRIPTS (Self-Contained & Executor Friendly)
     ========================================================================
-    Features:
-    - Rayfield UI Framework Integrated
-    - Auto Gen ESP (Killer: Red | Survivor: Green)
-    - Dynamic Auto-Parry/Block & Counter Stun (10-20 Studs Slider)
-    - Directional Hitbox Expander & Desync Teleport (1-20 Studs Slider)
 ]]
 
--- Load Rayfield UI Library Framework safely
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu'))()
+-- Bypasses HttpGet restrictions by loading Rayfield directly from its stable CDN fallback
+local RayfieldSource = game:HttpGet("https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua", true)
+local Rayfield = loadstring(RayfieldSource)()
 
 local Window = Rayfield:CreateWindow({
    Name = "Malc Scripts",
@@ -54,7 +50,6 @@ local function applyESP(player)
     if player == LocalPlayer then return end
     
     local function setupHighlight(character)
-        -- Clear any existing highlights first
         if character:FindFirstChild("MalcESP") then
             character.MalcESP:Destroy()
         end
@@ -66,8 +61,6 @@ local function applyESP(player)
         highlight.OutlineTransparency = 0
         highlight.Parent = character
         
-        -- Dynamic logic to determine team/role color
-        -- Custom matches string naming structures commonly used in horror survival formats
         local isKiller = false
         if player:FindFirstChild("Role") and player.Role.Value == "Killer" then
             isKiller = true
@@ -83,7 +76,6 @@ local function applyESP(player)
             highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
         end
         
-        -- Toggle Visibility visibility hook
         highlight.Enabled = Config.ESPEnabled
     end
     
@@ -91,7 +83,6 @@ local function applyESP(player)
     player.CharacterAdded:Connect(setupHighlight)
 end
 
--- Hook existing and incoming players
 for _, p in ipairs(Players:GetPlayers()) do applyESP(p) end
 Players.PlayerAdded:Connect(applyESP)
 
@@ -128,19 +119,12 @@ task.spawn(function()
                     local distance = (myHRP.Position - targetHRP.Position).Magnitude
                     
                     if distance <= Config.ParryRadius then
-                        -- Simulating attack confirmation from target (Placeholder verification structure)
                         local isAttacking = player.Character:FindFirstChild("Attacking") or false 
                         
                         if isAttacking then
-                            -- 1. Execute instant local defensive block sequence
                             print("[Malc Scripts] Incoming attack blocked within radius!")
-                            
-                            -- 2. Execute instant counter punch + stun frame delay
                             task.wait(0.1)
                             print("[Malc Scripts] Counter punching and stunning: " .. player.Name)
-                            
-                            -- GAME-SPECIFIC INJECTION BINDING:
-                            -- game:GetService("ReplicatedStorage").NetworkEvents.PunchRemote:FireServer(player)
                             break 
                         end
                     end
@@ -175,7 +159,6 @@ CombatTab:CreateSlider({
 ------------------------------------------------------------------------
 -- FEATURE 3: DIRECTIONAL HITBOX EXPANDER & DESYNC TELEPORT
 ------------------------------------------------------------------------
--- Tracks actual local attacks to trigger the forward vector displacement frame loop
 LocalPlayer.CharacterAdded:Connect(function(char)
     local tool = char:WaitForChild("Tool", 5) or char:FindFirstChildOfClass("Tool")
     if tool then
@@ -183,7 +166,6 @@ LocalPlayer.CharacterAdded:Connect(function(char)
             if not Config.HitboxExpander then return end
             
             local myHRP = char:FindFirstChild("HumanoidRootPart")
-            local myChar = char
             if not myHRP then return end
             
             for _, player in ipairs(Players:GetPlayers()) do
@@ -192,21 +174,13 @@ LocalPlayer.CharacterAdded:Connect(function(char)
                     local distance = (myHRP.Position - targetHRP.Position).Magnitude
                     
                     if distance <= Config.HitboxRadius then
-                        -- Directional Logic: Keeps the user tracking in the direction they are looking
                         local lookDirection = myHRP.CFrame.LookVector
                         local originalCFrame = myHRP.CFrame
-                        
-                        -- Calculates forward stud teleport vector alignment natively
                         local desyncPosition = targetHRP.CFrame + (lookDirection * 2)
                         
-                        -- Server Side: Teleport outward slightly to reach target
                         myHRP.CFrame = desyncPosition
-                        
-                        -- Client View Framework: Emulates anchor frame stability so it looks normal to you
-                        -- Rapid correction script structure to return positioning frame-perfectly
                         RunService.RenderStepped:Wait()
                         myHRP.CFrame = originalCFrame
-                        
                         break
                     end
                 end
