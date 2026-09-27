@@ -1,5 +1,5 @@
--- 1. LOAD THE RAYFIELD FRAMEWORK DIRECTLY FROM THE SOURCE REPOSITORY (FIXES THE NIL ERROR)
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
+-- 1. LOAD THE UNIVERSALLY COMPATIBLE RAYFIELD BACKUP SOURCE
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 
 -- 2. CREATE THE MAIN MENU WINDOW
 local Window = Rayfield:CreateWindow({
