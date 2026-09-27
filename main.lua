@@ -1,5 +1,5 @@
 -- 1. LOAD THE RAYFIELD FRAMEWORK
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- 2. CREATE THE MAIN MENU WINDOW
 local Window = Rayfield:CreateWindow({
@@ -39,7 +39,6 @@ VisualsTab:CreateToggle({
             while _G.ESP_Enabled do
                for _, player in pairs(Players:GetPlayers()) do
                   if player ~= LocalPlayer and player.Character then
-                     -- Check if they are Killer or Survivor (Often checked by team name or attributes in Forsaken)
                      local isKiller = player:GetAttribute("Role") == "Killer" or (player.Team and string.lower(player.Team.Name):find("killer"))
                      local targetColor = isKiller and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
                      
@@ -49,11 +48,10 @@ VisualsTab:CreateToggle({
                         hl.Name = "MalcESP"
                         hl.Parent = player.Character
                      end
-                     -- SPECIFICATION: Outline only, not fully bright/solid character filled
                      hl.FillColor = targetColor
-                     hl.FillTransparency = 1 -- 1 means completely see-through body
+                     hl.FillTransparency = 1
                      hl.OutlineColor = targetColor
-                     hl.OutlineTransparency = 0 -- Sharp solid outline
+                     hl.OutlineTransparency = 0
                   end
                end
                task.wait(1)
@@ -91,13 +89,12 @@ FarmTab:CreateToggle({
       if Value then
          task.spawn(function()
             while _G.Autogen_Enabled do
-               -- Standard Forsaken network interaction fire
                pcall(function()
                   local remote = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map"):WaitForChild("Generator"):WaitForChild("Remotes"):WaitForChild("RE")
                   if remote then
                      remote:FireServer()
                   end
-                pcall)
+               end) -- FIXED TYPO HERE
                task.wait(_G.Autogen_Speed)
             end
          end)
@@ -118,13 +115,12 @@ CombatTab:CreateToggle({
             while _G.AutoBlock_Enabled do
                local character = LocalPlayer.Character
                if character and character:FindFirstChild("HumanoidRootPart") then
-                  -- Find Killer nearby to anticipate hitting/dragging hitbox
                   local killer = nil
                   for _, player in pairs(Players:GetPlayers()) do
                      if player ~= LocalPlayer and (player:GetAttribute("Role") == "Killer" or (player.Team and string.lower(player.Team.Name):find("killer"))) then
                         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                            local dist = (player.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
-                           if dist < 15 then -- Within danger threat range
+                           if dist < 15 then
                               killer = player
                               break
                            end
@@ -133,19 +129,15 @@ CombatTab:CreateToggle({
                   end
                   
                   if killer then
-                     -- Trigger Block / Parry Action
-                     local blockRemote = character:FindFirstChild("Block") or character:FindFirstChild("Parry") -- Maps dynamically based on character configuration
+                     local blockRemote = character:FindFirstChild("Block") or character:FindFirstChild("Parry")
                      if blockRemote and blockRemote:IsA("RemoteEvent") then
                         blockRemote:FireServer(true)
                      end
                      
-                     -- SPECIFICATION: Wait 1 second while blocking, lock camera onto killer, punch to stun
                      task.wait(1)
                      if _G.AutoBlock_Enabled and killer.Character and killer.Character:FindFirstChild("HumanoidRootPart") then
-                        -- Aimbot Lock onto Killer
                         workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, killer.Character.HumanoidRootPart.Position)
                         
-                        -- Punch/Stun attack triggers immediately
                         local attackRemote = character:FindFirstChild("Punch") or character:FindFirstChild("Attack")
                         if attackRemote and attackRemote:IsA("RemoteEvent") then
                            attackRemote:FireServer(killer.Character.HumanoidRootPart.Position)
@@ -186,7 +178,6 @@ CombatTab:CreateToggle({
             local myChar = LocalPlayer.Character
             if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
             
-            -- Find Survivors
             for _, player in pairs(Players:GetPlayers()) do
                if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                   local isSurvivor = player:GetAttribute("Role") == "Survivor" or (player.Team and string.lower(player.Team.Name):find("survivor"))
@@ -194,13 +185,9 @@ CombatTab:CreateToggle({
                      local targetHRP = player.Character.HumanoidRootPart
                      local myHRP = myChar.HumanoidRootPart
                      
-                     -- SPECIFICATION: Calculates the exact facing vector direction of the survivor.
-                     -- Teleports the client-side representation to align with whatever way they are looking.
-                     -- If they look sideways, it teleports sideways; if they look front, it pulls front.
                      local survivorLookDirection = targetHRP.CFrame.LookVector
                      local desiredOffsetPosition = targetHRP.Position - (survivorLookDirection * (_G.Hitbox_Multiplier * 0.5))
                      
-                     -- Simulates desync position modification directly onto target client frames
                      pcall(function()
                         targetHRP.CFrame = CFrame.new(desiredOffsetPosition, myHRP.Position)
                      end)
