@@ -1,4 +1,4 @@
--- 1. LOAD THE RAYFIELD FRAMEWORK
+-- 1. LOAD THE RAYFIELD FRAMEWORK CLEANLY
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu'))()
 
 -- 2. CREATE THE MAIN MENU WINDOW
@@ -14,7 +14,7 @@ local VisualsTab = Window:CreateTab("Visuals")
 local FarmTab = Window:CreateTab("Farm/Autogen")
 local CombatTab = Window:CreateTab("Combat")
 
--- GLOBALS FOR SCRIPTS
+-- GLOBALS FOR VALUES
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -69,7 +69,7 @@ VisualsTab:CreateToggle({
 })
 
 -- ========================================================
--- 5. FARM: OPTIMIZED AUTO GENERATOR (LAG-FREE)
+-- 5. FARM: OPTIMIZED AUTO GENERATOR
 -- ========================================================
 FarmTab:CreateSlider({
    Name = "Autogen Interval (Seconds)",
@@ -93,7 +93,6 @@ FarmTab:CreateToggle({
                pcall(function()
                   local myChar = LocalPlayer.Character
                   if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-                     -- Optimized to look only inside specific map interactive folders instead of the whole game
                      local mapDir = workspace:FindFirstChild("Map") or workspace
                      for _, desc in pairs(mapDir:GetDescendants()) do
                         if desc:IsA("ProximityPrompt") then
@@ -119,7 +118,7 @@ FarmTab:CreateToggle({
 })
 
 -- ========================================================
--- 6. COMBAT: FIX AUTO BLOCK (Q KEY) & AUTO STUN PUNCH
+-- 6. COMBAT: SIMULATED INPUT AUTO BLOCK (Q KEY) & AUTO STUN
 -- ========================================================
 CombatTab:CreateToggle({
    Name = "Auto Block & Stun Parry",
@@ -147,24 +146,18 @@ CombatTab:CreateToggle({
                   
                   if killer and not isBlocking then
                      isBlocking = true
-                     -- Physically hold down the Q key
                      VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-                     
-                     task.wait(1) -- Hold block state for exactly 1 second
+                     task.wait(1)
                      
                      if _G.AutoBlock_Enabled and killer.Character and killer.Character:FindFirstChild("HumanoidRootPart") then
-                        -- Instantly lock the camera directly onto the killer
                         workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, killer.Character.HumanoidRootPart.Position)
-                        
-                        -- Release the Q key to drop block defense
                         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
                         
-                        -- Instantly simulate a mouse click to throw the stun punch
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
                         task.wait(0.05)
                         VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                      end
-                     task.wait(1.5) -- Cool down block loop to prevent key spam crashes
+                     task.wait(1.5)
                      isBlocking = false
                   end
                end
@@ -176,7 +169,7 @@ CombatTab:CreateToggle({
 })
 
 -- ========================================================
--- 7. COMBAT: FIXED HITBOX EXPANDER (RESIZES SELECTION ON SCREEN)
+-- 7. COMBAT: HITBOX EXPANDER
 -- ========================================================
 CombatTab:CreateSlider({
    Name = "Hitbox Size Expansion",
@@ -186,7 +179,7 @@ CombatTab:CreateSlider({
    CurrentValue = 1,
    Callback = function(Value)
       _G.Hitbox_Size = Value
-   end
+   end,
 })
 
 CombatTab:CreateToggle({
@@ -201,10 +194,9 @@ CombatTab:CreateToggle({
                   if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                      local isSurvivor = player:GetAttribute("Role") == "Survivor" or (player.Team and string.lower(player.Team.Name):find("survivor"))
                      if isSurvivor then
-                        -- Correct client logic: expand the physics box size so your weapons hit them anywhere
                         local hrp = player.Character.HumanoidRootPart
                         hrp.Size = Vector3.new(_G.Hitbox_Size, _G.Hitbox_Size, _G.Hitbox_Size)
-                        hrp.Transparency = 0.7 -- Dim it slightly so you can see the giant hitbox boundary
+                        hrp.Transparency = 0.7
                         hrp.CanCollide = false
                      end
                   end
@@ -213,7 +205,6 @@ CombatTab:CreateToggle({
             end
          end)
       else
-         -- Reset back to standard default Roblox physics box size when turned off
          for _, player in pairs(Players:GetPlayers()) do
             if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                local hrp = player.Character.HumanoidRootPart
