@@ -1,5 +1,5 @@
 -- 1. LOAD THE RAYFIELD FRAMEWORK
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu'))()
 
 -- 2. CREATE THE MAIN MENU WINDOW
 local Window = Rayfield:CreateWindow({
@@ -18,6 +18,8 @@ local CombatTab = Window:CreateTab("Combat")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local VirtualInputManager = game:GetService("VirtualInputManager") -- Used to simulate real keypresses safely
 
 _G.ESP_Enabled = false
 _G.Autogen_Enabled = false
@@ -27,7 +29,7 @@ _G.Hitbox_Enabled = false
 _G.Hitbox_Multiplier = 1
 
 -- ========================================================
--- 4. VISUALS: OUTLINE-ONLY ESP (RED KILLER / GREEN SURVIVOR)
+-- 4. VISUALS: WORKING ROLE OUTLINE ESP
 -- ========================================================
 VisualsTab:CreateToggle({
    Name = "Role Outline ESP",
@@ -39,7 +41,8 @@ VisualsTab:CreateToggle({
             while _G.ESP_Enabled do
                for _, player in pairs(Players:GetPlayers()) do
                   if player ~= LocalPlayer and player.Character then
-                     local isKiller = player:GetAttribute("Role") == "Killer" or (player.Team and string.lower(player.Team.Name):find("killer"))
+                     -- Dynamic role checking via attributes or team names
+                     local isKiller = player:GetAttribute("Role") == "Killer" or player:GetAttribute("IsKiller") == true or (player.Team and string.lower(player.Team.Name):find("killer"))
                      local targetColor = isKiller and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
                      
                      local hl = player.Character:FindFirstChild("MalcESP")
@@ -68,7 +71,7 @@ VisualsTab:CreateToggle({
 })
 
 -- ========================================================
--- 5. FARM: AUTO GENERATOR WITH CUSTOM SPEED SLIDER
+-- 5. FARM: PROXIMITY-BASED AUTO GENERATOR
 -- ========================================================
 FarmTab:CreateSlider({
    Name = "Autogen Interval (Seconds)",
@@ -90,12 +93,25 @@ FarmTab:CreateToggle({
          task.spawn(function()
             while _G.Autogen_Enabled do
                pcall(function()
-                  local remote = workspace:WaitForChild("Map"):WaitForChild("Ingame"):WaitForChild("Map"):WaitForChild("Generator"):WaitForChild("Remotes"):WaitForChild("RE")
-                  if remote then
-                     remote:FireServer()
+                  local myChar = LocalPlayer.Character
+                  if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                     -- Scans the entire map for interactable prompts matching progress/objectives
+                     for _, desc in pairs(workspace:GetDescendants()) do
+                        if desc:IsA("ProximityPrompt") then
+                           -- Target object names related to generators or repairs
+                           if string.lower(desc.Parent.Name):find("gen") or string.lower(desc.ObjectText):find("repair") or string.lower(desc.ActionText):find("fix") then
+                              local dist = (desc.Parent.Position - myChar.HumanoidRootPart.Position).Magnitude
+                              if dist < 25 then -- Must be nearby to interact safely without bans
+                                 desc:InputHoldBegin()
+                                 task.wait(_G.Autogen_Speed)
+                                 desc:InputHoldEnd()
+                              end
+                           end
+                        end
+                     end
                   end
-               end) -- FIXED TYPO HERE
-               task.wait(_G.Autogen_Speed)
+               end)
+               task.wait(0.5)
             end
          end)
       end
@@ -103,7 +119,7 @@ FarmTab:CreateToggle({
 })
 
 -- ========================================================
--- 6. COMBAT: AUTO BLOCK & PARRY (1s LOCK-ON + PUNCH STUN)
+-- 6. COMBAT: SIMULATED INPUT AUTO BLOCK & STUN
 -- ========================================================
 CombatTab:CreateToggle({
    Name = "Auto Block & Stun Parry",
@@ -116,11 +132,12 @@ CombatTab:CreateToggle({
                local character = LocalPlayer.Character
                if character and character:FindFirstChild("HumanoidRootPart") then
                   local killer = nil
+                  -- Find nearest player matching Killer criteria
                   for _, player in pairs(Players:GetPlayers()) do
                      if player ~= LocalPlayer and (player:GetAttribute("Role") == "Killer" or (player.Team and string.lower(player.Team.Name):find("killer"))) then
                         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                            local dist = (player.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
-                           if dist < 15 then
+                           if dist < 18 then -- Attack warning boundary
                               killer = player
                               break
                            end
@@ -129,19 +146,20 @@ CombatTab:CreateToggle({
                   end
                   
                   if killer then
-                     local blockRemote = character:FindFirstChild("Block") or character:FindFirstChild("Parry")
-                     if blockRemote and blockRemote:IsA("RemoteEvent") then
-                        blockRemote:FireServer(true)
-                     end
+                     -- Forcefully trigger right-click or F key (standard block inputs for Roblox horror combat engines)
+                     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.F, false, game)
                      
                      task.wait(1)
+                     
                      if _G.AutoBlock_Enabled and killer.Character and killer.Character:FindFirstChild("HumanoidRootPart") then
+                        -- Snap look vector right at the killer
                         workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, killer.Character.HumanoidRootPart.Position)
                         
-                        local attackRemote = character:FindFirstChild("Punch") or character:FindFirstChild("Attack")
-                        if attackRemote and attackRemote:IsA("RemoteEvent") then
-                           attackRemote:FireServer(killer.Character.HumanoidRootPart.Position)
-                        end
+                        -- Lift the block shield and immediately punch back to stun
+                        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0) -- Client-side Left Click attack simulation
+                        task.wait(0.1)
+                        VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
                      end
                   end
                end
@@ -153,7 +171,7 @@ CombatTab:CreateToggle({
 })
 
 -- ========================================================
--- 7. COMBAT: RELATIVE HITBOX EXPANDER (TELEPORT DESYNC)
+-- 7. COMBAT: DIRECTIONAL HITBOX EXPANDER
 -- ========================================================
 CombatTab:CreateSlider({
    Name = "Hitbox Range (Desync Multiplier)",
