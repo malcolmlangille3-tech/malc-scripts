@@ -1,5 +1,5 @@
--- 1. LOAD THE RAYFIELD FRAMEWORK CLEANLY
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu'))()
+-- 1. LOAD THE RAYFIELD FRAMEWORK DIRECTLY FROM THE SOURCE REPOSITORY (FIXES THE NIL ERROR)
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
 
 -- 2. CREATE THE MAIN MENU WINDOW
 local Window = Rayfield:CreateWindow({
